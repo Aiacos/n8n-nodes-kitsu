@@ -12,25 +12,27 @@
     "production"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/cgwire/zou",
+  "homepage": "https://github.com/Aiacos/n8n-nodes-kitsu",
   "author": {
-    "name": "n8n-nodes-kitsu"
+    "name": "Aiacos",
+    "url": "https://github.com/Aiacos"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/n8n-nodes-kitsu"
+    "url": "https://github.com/Aiacos/n8n-nodes-kitsu"
   },
   "engines": {
     "node": ">=18.10"
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && gulp build:icons",
+    "build": "tsc",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials --ext .ts",
     "lintfix": "eslint nodes credentials --ext .ts --fix",
-    "prepublishOnly": "npm run build && npm run lint"
+    "prepublishOnly": "npm run build && npm run lint",
+    "release": "n8n-node release"
   },
   "files": [
     "dist"
@@ -45,6 +47,7 @@
     ]
   },
   "devDependencies": {
+    "@n8n/node-cli": "^0.23.0",
     "@types/node": "^18.19.130",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "n8n-workflow": "*",
