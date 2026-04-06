@@ -717,15 +717,15 @@ export class Kitsu implements INodeType {
 				// Normalise: array → multiple items, object → single item
 				if (Array.isArray(result)) {
 					for (const item of result) {
-						returnData.push({ json: item });
+						returnData.push({ json: item, pairedItem: { item: i } });
 					}
 				} else {
-					returnData.push({ json: result });
+					returnData.push({ json: result, pairedItem: { item: i } });
 				}
 
 			} catch (error) {
 				if (this.continueOnFail()) {
-					returnData.push({ json: { error: (error as Error).message } });
+					returnData.push({ json: { error: (error as Error).message }, pairedItem: { item: i } });
 					continue;
 				}
 				throw error;

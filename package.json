@@ -60,8 +60,5 @@
   "peerDependencies": {
     "n8n-workflow": "*"
   },
-  "dependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^9.39.4"
-  }
+  "dependencies": {}
 }
