@@ -1,0 +1,280 @@
+{
+  "name": "Kitsu — Chatbot produzione VFX",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-chat",
+      "name": "Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "kitsu-chat-webhook"
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "Sei un assistente di produzione VFX/animation collegato a Kitsu.\nPuoi rispondere a domande sulla produzione, cercare task, shot, asset, commenti e aggiornare lo stato dei task.\n\nLinee guida:\n- Parla sempre in italiano\n- Quando cerchi task o shot, usa i filtri per project_id se disponibile\n- Prima di modificare qualcosa, conferma sempre con l'utente\n- Quando riporti liste, usa un formato chiaro e leggibile\n- Puoi anche analizzare la situazione produttiva e dare suggerimenti\n\nVariabili disponibili:\n- Project ID predefinito: {{ $vars.KITSU_PROJECT_ID }}"
+        }
+      },
+      "id": "ai-agent-chat",
+      "name": "AI Agent: Assistente Kitsu",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "openai-chat-model",
+      "name": "GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [260, 560],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "sessionKey": "sessionId"
+      },
+      "id": "memory",
+      "name": "Memoria conversazione",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [500, 560]
+    },
+    {
+      "parameters": {
+        "name": "cerca_task",
+        "description": "Cerca task in Kitsu. Può filtrare per project_id, task_status_id, task_type_id, assignee_id. Restituisce lista di task con id, name, status, assignees, due_date.",
+        "resource": "task",
+        "operation": "getAll",
+        "filters": {
+          "project_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('project_id', 'UUID del progetto. Lascia vuoto per tutti i progetti.', 'string') }}",
+          "task_status_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_status_id', 'UUID dello stato task. Lascia vuoto per tutti gli stati.', 'string') }}",
+          "task_type_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_type_id', 'UUID del tipo task (es. Animation, Lighting). Lascia vuoto per tutti.', 'string') }}",
+          "assignee_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('assignee_id', 'UUID della persona assegnata. Lascia vuoto per tutti.', 'string') }}"
+        }
+      },
+      "id": "tool-cerca-task",
+      "name": "Tool: Cerca Task",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 480],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "cerca_shot",
+        "description": "Cerca shot in Kitsu. Può filtrare per project_id. Restituisce lista di shot con id, name, sequence, frame_in, frame_out.",
+        "resource": "shot",
+        "operation": "getAll",
+        "filters": {
+          "project_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('project_id', 'UUID del progetto', 'string') }}"
+        }
+      },
+      "id": "tool-cerca-shot",
+      "name": "Tool: Cerca Shot",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 600],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "cerca_asset",
+        "description": "Cerca asset in Kitsu. Può filtrare per project_id. Restituisce lista di asset con id, name, asset_type, description.",
+        "resource": "asset",
+        "operation": "getAll",
+        "filters": {
+          "project_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('project_id', 'UUID del progetto', 'string') }}"
+        }
+      },
+      "id": "tool-cerca-asset",
+      "name": "Tool: Cerca Asset",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 720],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "leggi_commenti",
+        "description": "Legge tutti i commenti di un task specifico. Richiede il task_id.",
+        "resource": "comment",
+        "operation": "getAllForTask",
+        "taskId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_id', 'UUID del task di cui leggere i commenti', 'string') }}"
+      },
+      "id": "tool-leggi-commenti",
+      "name": "Tool: Leggi Commenti Task",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 840],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "aggiorna_task",
+        "description": "Aggiorna un task Kitsu. Usare per cambiare priorità, assegnare persone, cambiare due_date. Chiedere conferma all'utente prima di usare questo tool.",
+        "resource": "task",
+        "operation": "update",
+        "id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_id', 'UUID del task da aggiornare', 'string') }}",
+        "fields": {
+          "priority": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('priority', 'Priorità: 0=normale, 1=alta, 2=molto alta, 3=urgente', 'number') }}",
+          "assignees": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('assignees', 'JSON array di UUID delle persone da assegnare', 'string') }}",
+          "due_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('due_date', 'Data di scadenza formato YYYY-MM-DD', 'string') }}"
+        }
+      },
+      "id": "tool-aggiorna-task",
+      "name": "Tool: Aggiorna Task",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 960],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "posta_commento",
+        "description": "Posta un commento su un task Kitsu. Opzionalmente cambia anche lo stato del task. Chiedere conferma all'utente prima di usare questo tool.",
+        "resource": "comment",
+        "operation": "create",
+        "taskId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_id', 'UUID del task su cui postare il commento', 'string') }}",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('testo', 'Testo del commento', 'string') }}",
+        "task_status_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task_status_id', 'UUID del nuovo stato da impostare. Lascia vuoto per non cambiare lo stato.', 'string') }}"
+      },
+      "id": "tool-posta-commento",
+      "name": "Tool: Posta Commento",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 1080],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "cerca_persone",
+        "description": "Restituisce la lista di tutte le persone (artisti, supervisor, manager) presenti in Kitsu con id, nome, email e ruolo.",
+        "resource": "person",
+        "operation": "getAll",
+        "filters": {}
+      },
+      "id": "tool-cerca-persone",
+      "name": "Tool: Cerca Persone",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 1200],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "lista_progetti",
+        "description": "Restituisce la lista di tutti i progetti Kitsu con id, nome, tipo produzione e stato.",
+        "resource": "project",
+        "operation": "getAll",
+        "filters": {}
+      },
+      "id": "tool-lista-progetti",
+      "name": "Tool: Lista Progetti",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [740, 1320],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Chat": {
+      "main": [[{ "node": "AI Agent: Assistente Kitsu", "type": "main", "index": 0 }]]
+    },
+    "GPT-4o": {
+      "ai_languageModel": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memoria conversazione": {
+      "ai_memory": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_memory", "index": 0 }]]
+    },
+    "Tool: Cerca Task": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 0 }]]
+    },
+    "Tool: Cerca Shot": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 1 }]]
+    },
+    "Tool: Cerca Asset": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 2 }]]
+    },
+    "Tool: Leggi Commenti Task": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 3 }]]
+    },
+    "Tool: Aggiorna Task": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 4 }]]
+    },
+    "Tool: Posta Commento": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 5 }]]
+    },
+    "Tool: Cerca Persone": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 6 }]]
+    },
+    "Tool: Lista Progetti": {
+      "ai_tool": [[{ "node": "AI Agent: Assistente Kitsu", "type": "ai_tool", "index": 7 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "versionId": "1",
+  "triggerCount": 0,
+  "tags": [{ "name": "kitsu" }, { "name": "ai" }, { "name": "chatbot" }, { "name": "vfx" }]
+}

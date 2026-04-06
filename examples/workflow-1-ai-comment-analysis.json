@@ -1,0 +1,160 @@
+{
+  "name": "Kitsu — AI analizza e riassume commenti",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Avvia manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "task",
+        "operation": "getAll",
+        "filters": {
+          "project_id": "={{ $vars.KITSU_PROJECT_ID }}"
+        }
+      },
+      "id": "kitsu-get-tasks",
+      "name": "Kitsu: Prendi tutti i Task",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "split-tasks",
+      "name": "Split in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "getAllForTask",
+        "taskId": "={{ $json.id }}"
+      },
+      "id": "kitsu-get-comments",
+      "name": "Kitsu: Prendi Commenti del Task",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "commenti",
+        "include": "specifiedFields",
+        "fieldsToInclude": {
+          "fieldToInclude": [
+            { "fieldToInclude": "text" },
+            { "fieldToInclude": "person_id" },
+            { "fieldToInclude": "created_at" }
+          ]
+        }
+      },
+      "id": "aggregate-comments",
+      "name": "Aggrega Commenti",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Sei un supervisore di produzione VFX/animation. Analizza i commenti di revisione di un task e produci:\n1. Un riassunto conciso dei problemi aperti\n2. Le priorità di intervento\n3. Eventuali blockers\nRispondi in italiano, in modo professionale e diretto."
+            },
+            {
+              "role": "user",
+              "content": "=Task: {{ $('Kitsu: Prendi tutti i Task').item.json.name }}\nStato attuale: {{ $('Kitsu: Prendi tutti i Task').item.json.task_status_id }}\n\nCommenti:\n{{ $json.commenti.map(c => `[${c.created_at}] ${c.text}`).join('\\n---\\n') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ai-analyze",
+      "name": "AI: Analizza Commenti",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "create",
+        "taskId": "={{ $('Kitsu: Prendi tutti i Task').item.json.id }}",
+        "text": "=🤖 Riepilogo AI:\n\n{{ $json.message.content }}",
+        "task_status_id": ""
+      },
+      "id": "kitsu-post-summary",
+      "name": "Kitsu: Posta Riepilogo come Commento",
+      "type": "n8n-nodes-kitsu.kitsu",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "kitsuApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Kitsu API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Avvia manualmente": {
+      "main": [[{ "node": "Kitsu: Prendi tutti i Task", "type": "main", "index": 0 }]]
+    },
+    "Kitsu: Prendi tutti i Task": {
+      "main": [[{ "node": "Split in Batches", "type": "main", "index": 0 }]]
+    },
+    "Split in Batches": {
+      "main": [[{ "node": "Kitsu: Prendi Commenti del Task", "type": "main", "index": 0 }]]
+    },
+    "Kitsu: Prendi Commenti del Task": {
+      "main": [[{ "node": "Aggrega Commenti", "type": "main", "index": 0 }]]
+    },
+    "Aggrega Commenti": {
+      "main": [[{ "node": "AI: Analizza Commenti", "type": "main", "index": 0 }]]
+    },
+    "AI: Analizza Commenti": {
+      "main": [[{ "node": "Kitsu: Posta Riepilogo come Commento", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "versionId": "1",
+  "triggerCount": 0,
+  "tags": [{ "name": "kitsu" }, { "name": "ai" }, { "name": "vfx" }]
+}
