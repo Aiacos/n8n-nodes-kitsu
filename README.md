@@ -42,36 +42,41 @@ JWT-based. The node logs in automatically at execution time using your email and
 
 ## Installation
 
-### Self-hosted n8n (recommended)
+> Requires n8n **self-hosted** (v1.0+). Community nodes are not available on n8n Cloud.
+
+### Metodo 1 — Interfaccia n8n (consigliato)
+
+1. Vai su **Settings → Community Nodes**
+2. Clicca **Install a community node**
+3. Inserisci il nome del pacchetto:
+   ```
+   n8n-nodes-kitsu
+   ```
+4. Spunta la conferma e clicca **Install**
+
+n8n installa il nodo automaticamente — nessun riavvio necessario.
+
+### Metodo 2 — npm da terminale
 
 ```bash
-# Navigate to your n8n custom extensions folder (default: ~/.n8n)
 npm install --prefix ~/.n8n n8n-nodes-kitsu
-# Then restart n8n
+n8n start
 ```
 
-Or with Docker, add to your `docker-compose.yml`:
-
-```yaml
-environment:
-  - N8N_CUSTOM_EXTENSIONS=/home/node/.n8n
-```
+### Metodo 3 — Docker
 
 ```dockerfile
 FROM n8nio/n8n:latest
 USER root
-RUN npm install --prefix /home/node/.n8n n8n-nodes-kitsu
+RUN cd /usr/local/lib/node_modules/n8n && npm install n8n-nodes-kitsu
 USER node
 ```
 
-### Manual install from source
+Oppure via `docker exec` su un container già avviato:
 
 ```bash
-git clone https://github.com/Aiacos/n8n-nodes-kitsu.git
-cd n8n-nodes-kitsu
-npm install
-npm run build
-# Then copy the dist/ folder into your n8n custom extensions path
+docker exec -it <container_name> npm install --prefix /home/node/.n8n n8n-nodes-kitsu
+docker restart <container_name>
 ```
 
 ---

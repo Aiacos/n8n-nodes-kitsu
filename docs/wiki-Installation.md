@@ -1,39 +1,65 @@
-# Installation
+# Installazione
 
 ## Prerequisiti
 
-- n8n **self-hosted** (v1.0+) — i community node non verificati non sono disponibili su n8n Cloud
+- n8n **self-hosted** (v1.0+)
 - Node.js >= 18
+
+> I community node non sono installabili su n8n Cloud (piano gratuito/Pro). Serve un'istanza self-hosted.
 
 ---
 
-## Metodo 1 — npm (raccomandato)
+## Metodo 1 — Interfaccia n8n (raccomandato)
+
+Questo è il metodo più semplice, direttamente dall'UI di n8n.
+
+1. Apri n8n e vai su **Settings → Community Nodes**
+2. Clicca **Install a community node**
+3. Nel campo *npm package name* inserisci:
+   ```
+   n8n-nodes-kitsu
+   ```
+4. Spunta la casella di conferma e clicca **Install**
+5. n8n scarica e installa il pacchetto automaticamente — nessun riavvio necessario
+
+Il nodo **Kitsu** apparirà subito nella palette.
+
+---
+
+## Metodo 2 — npm da terminale
+
+Se gestisci n8n da riga di comando:
 
 ```bash
-# Installa nella cartella custom extensions di n8n (default: ~/.n8n)
-npm install --prefix ~/.n8n n8n-nodes-kitsu
+npm install -g n8n-nodes-kitsu
+```
 
-# Riavvia n8n
+Oppure nella cartella dati di n8n (default `~/.n8n`):
+
+```bash
+npm install --prefix ~/.n8n n8n-nodes-kitsu
+```
+
+Poi riavvia n8n:
+
+```bash
 n8n start
 ```
 
-Il nodo apparirà nella palette come **Kitsu**.
-
 ---
 
-## Metodo 2 — Docker
+## Metodo 3 — Docker
 
 ### Dockerfile
 
 ```dockerfile
 FROM n8nio/n8n:latest
-ENV N8N_CUSTOM_EXTENSIONS=/home/node/.n8n
 USER root
-RUN npm install --prefix /home/node/.n8n n8n-nodes-kitsu
+RUN cd /usr/local/lib/node_modules/n8n && npm install n8n-nodes-kitsu
 USER node
 ```
 
-### docker-compose.yml
+### docker-compose.yml con variabile d'ambiente
 
 ```yaml
 services:
@@ -50,37 +76,18 @@ volumes:
   n8n_data:
 ```
 
----
-
-## Metodo 3 — Installazione da sorgente
+Poi installa il nodo nel volume:
 
 ```bash
-git clone https://github.com/Aiacos/n8n-nodes-kitsu.git
-cd n8n-nodes-kitsu
-npm install
-npm run build
+docker exec -it <container_name> npm install --prefix /home/node/.n8n n8n-nodes-kitsu
+docker restart <container_name>
 ```
-
-Poi copia la cartella `dist/` nella tua directory custom extensions e imposta la variabile d'ambiente:
-
-```bash
-export N8N_CUSTOM_EXTENSIONS=/path/to/n8n-nodes-kitsu
-n8n start
-```
-
----
-
-## Metodo 4 — GUI n8n (solo nodi verificati)
-
-1. Vai su **Settings → Community Nodes**
-2. Clicca **Install**
-3. Inserisci `n8n-nodes-kitsu`
-4. Conferma
-
-> Nota: questo metodo è disponibile solo se il pacchetto è stato verificato e pubblicato su npm.
 
 ---
 
 ## Verifica installazione
 
-Dopo il riavvio di n8n, cerca **Kitsu** nella palette dei nodi. Dovresti vedere il nodo con l'icona blu **K**.
+Dopo l'installazione, apri il canvas di n8n e cerca **Kitsu** nella palette dei nodi.  
+Dovresti vedere il nodo con l'icona blu **K**.
+
+Se non compare, riavvia n8n e svuota la cache del browser.
