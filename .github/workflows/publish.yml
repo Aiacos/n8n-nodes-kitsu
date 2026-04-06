@@ -70,7 +70,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Release
         # Pubblica su npm con provenance attestation (richiede id-token: write sopra).
