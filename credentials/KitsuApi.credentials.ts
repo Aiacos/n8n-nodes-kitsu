@@ -24,6 +24,7 @@ export class KitsuApi implements ICredentialType {
 			displayName: 'Email',
 			name: 'email',
 			type: 'string',
+			placeholder: 'name@email.com',
 			typeOptions: { password: false },
 			default: '',
 			description: 'Your Kitsu account email address',

@@ -8,6 +8,7 @@ import {
 	NodeOperationError,
 	IDataObject,
 	IHttpRequestOptions,
+	JsonObject,
 } from 'n8n-workflow';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ async function kitsuRequest(
 		if (resp === undefined || resp === null) return {};
 		return resp as IDataObject | IDataObject[];
 	} catch (error) {
-		throw new NodeApiError(this.getNode(), error as object);
+		throw new NodeApiError(this.getNode(), error as unknown as JsonObject);
 	}
 }
 
@@ -88,11 +89,11 @@ const RESOURCES = [
 ];
 
 const CRUD_OPS = [
-	{ name: 'Create', value: 'create' },
-	{ name: 'Delete', value: 'delete' },
-	{ name: 'Get', value: 'get' },
-	{ name: 'Get All', value: 'getAll' },
-	{ name: 'Update', value: 'update' },
+	{ name: 'Create', value: 'create', action: 'Create' },
+	{ name: 'Delete', value: 'delete', action: 'Delete' },
+	{ name: 'Get', value: 'get', action: 'Get' },
+	{ name: 'Get Many', value: 'getAll', action: 'Get many' },
+	{ name: 'Update', value: 'update', action: 'Update' },
 ];
 
 // ─── Node definition ──────────────────────────────────────────────────────────
@@ -107,8 +108,8 @@ export class Kitsu implements INodeType {
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Interact with the Kitsu/CGWire production management API (Zou)',
 		defaults: { name: 'Kitsu' },
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'kitsuApi',
@@ -151,10 +152,10 @@ export class Kitsu implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{ name: 'Create', value: 'create' },
-					{ name: 'Delete', value: 'delete' },
-					{ name: 'Get All for Task', value: 'getAllForTask' },
-					{ name: 'Update', value: 'update' },
+					{ name: 'Create', value: 'create', action: 'Create a comment' },
+					{ name: 'Delete', value: 'delete', action: 'Delete a comment' },
+					{ name: 'Get All for Task', value: 'getAllForTask', action: 'Get all comments for a task' },
+					{ name: 'Update', value: 'update', action: 'Update a comment' },
 				],
 				default: 'getAllForTask',
 				displayOptions: { show: { resource: ['comment'] } },
@@ -167,8 +168,8 @@ export class Kitsu implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{ name: 'Get All for Task', value: 'getAllForTask' },
-					{ name: 'Get', value: 'get' },
+					{ name: 'Get', value: 'get', action: 'Get a preview file' },
+					{ name: 'Get All for Task', value: 'getAllForTask', action: 'Get all preview files for a task' },
 				],
 				default: 'getAllForTask',
 				displayOptions: { show: { resource: ['previewFile'] } },
@@ -180,7 +181,7 @@ export class Kitsu implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				options: [{ name: 'Execute', value: 'execute' }],
+				options: [{ name: 'Execute', value: 'execute', action: 'Execute a custom action' }],
 				default: 'execute',
 				displayOptions: { show: { resource: ['customAction'] } },
 			},
@@ -244,30 +245,19 @@ export class Kitsu implements INodeType {
 				},
 				options: [
 					{
-						displayName: 'Project ID',
-						name: 'project_id',
-						type: 'string',
-						default: '',
-						description: 'Filter results by project UUID',
-					},
-					{
-						displayName: 'Task Type ID',
-						name: 'task_type_id',
-						type: 'string',
-						default: '',
-					},
-					{
-						displayName: 'Task Status ID',
-						name: 'task_status_id',
-						type: 'string',
-						default: '',
-					},
-					{
 						displayName: 'Assignee ID',
 						name: 'assignee_id',
 						type: 'string',
 						default: '',
 						description: 'Filter tasks by person UUID',
+					},
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						typeOptions: { minValue: 1 },
+						description: 'Max number of results to return',
+						default: 50,
 					},
 					{
 						displayName: 'Page',
@@ -276,10 +266,23 @@ export class Kitsu implements INodeType {
 						default: 1,
 					},
 					{
-						displayName: 'Limit',
-						name: 'limit',
-						type: 'number',
-						default: 100,
+						displayName: 'Project ID',
+						name: 'project_id',
+						type: 'string',
+						default: '',
+						description: 'Filter results by project UUID',
+					},
+					{
+						displayName: 'Task Status ID',
+						name: 'task_status_id',
+						type: 'string',
+						default: '',
+					},
+					{
+						displayName: 'Task Type ID',
+						name: 'task_type_id',
+						type: 'string',
+						default: '',
 					},
 				],
 			},
@@ -298,6 +301,8 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
+					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
+					{ displayName: 'End Date', name: 'end_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
 					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{
 						displayName: 'Production Type',
@@ -310,9 +315,7 @@ export class Kitsu implements INodeType {
 						],
 						default: 'short',
 					},
-					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 					{ displayName: 'Start Date', name: 'start_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
-					{ displayName: 'End Date', name: 'end_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
 				],
 			},
 
@@ -330,13 +333,13 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
+					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
+					{ displayName: 'FPS', name: 'fps', type: 'number', default: 24 },
+					{ displayName: 'Frame In', name: 'frame_in', type: 'number', default: 0 },
+					{ displayName: 'Frame Out', name: 'frame_out', type: 'number', default: 0 },
 					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
 					{ displayName: 'Sequence ID', name: 'sequence_id', type: 'string', default: '' },
-					{ displayName: 'Frame In', name: 'frame_in', type: 'number', default: 0 },
-					{ displayName: 'Frame Out', name: 'frame_out', type: 'number', default: 0 },
-					{ displayName: 'FPS', name: 'fps', type: 'number', default: 24 },
-					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 				],
 			},
 
@@ -354,10 +357,10 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
-					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
-					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
 					{ displayName: 'Asset Type ID', name: 'entity_type_id', type: 'string', default: '' },
 					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
+					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
+					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
 				],
 			},
 
@@ -375,16 +378,16 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
-					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
-					{ displayName: 'Entity ID', name: 'entity_id', type: 'string', default: '', description: 'Shot or Asset UUID' },
-					{ displayName: 'Task Type ID', name: 'task_type_id', type: 'string', default: '' },
-					{ displayName: 'Task Status ID', name: 'task_status_id', type: 'string', default: '' },
-					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
-					{ displayName: 'Assignee IDs (JSON array)', name: 'assignees', type: 'string', default: '[]', description: 'e.g. ["uuid1","uuid2"]' },
+					{ displayName: 'Assignee IDs (JSON Array)', name: 'assignees', type: 'string', default: '[]', description: 'E.g. ["uuid1","uuid2"].' },
 					{ displayName: 'Due Date', name: 'due_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
-					{ displayName: 'Start Date', name: 'start_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
+					{ displayName: 'Entity ID', name: 'entity_id', type: 'string', default: '', description: 'Shot or Asset UUID' },
+					{ displayName: 'Estimate (Days)', name: 'estimation', type: 'number', default: 0 },
+					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{ displayName: 'Priority', name: 'priority', type: 'number', default: 0 },
-					{ displayName: 'Estimate (days)', name: 'estimation', type: 'number', default: 0 },
+					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
+					{ displayName: 'Start Date', name: 'start_date', type: 'string', default: '', description: 'YYYY-MM-DD' },
+					{ displayName: 'Task Status ID', name: 'task_status_id', type: 'string', default: '' },
+					{ displayName: 'Task Type ID', name: 'task_type_id', type: 'string', default: '' },
 				],
 			},
 
@@ -402,24 +405,24 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
+					{ displayName: 'Active', name: 'active', type: 'boolean', default: true },
+					{ displayName: 'Email', name: 'email', type: 'string', placeholder: 'name@email.com', default: '' },
 					{ displayName: 'First Name', name: 'first_name', type: 'string', default: '' },
 					{ displayName: 'Last Name', name: 'last_name', type: 'string', default: '' },
-					{ displayName: 'Email', name: 'email', type: 'string', default: '' },
 					{
 						displayName: 'Role',
 						name: 'role',
 						type: 'options',
 						options: [
 							{ name: 'Admin', value: 'admin' },
+							{ name: 'Client', value: 'client' },
 							{ name: 'Manager', value: 'manager' },
 							{ name: 'Supervisor', value: 'supervisor' },
 							{ name: 'User (Artist)', value: 'user' },
-							{ name: 'Client', value: 'client' },
 							{ name: 'Vendor', value: 'vendor' },
 						],
 						default: 'user',
 					},
-					{ displayName: 'Active', name: 'active', type: 'boolean', default: true },
 				],
 			},
 
@@ -437,10 +440,10 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
+					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
+					{ displayName: 'Episode ID', name: 'parent_id', type: 'string', default: '' },
 					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
-					{ displayName: 'Episode ID', name: 'parent_id', type: 'string', default: '' },
-					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 				],
 			},
 
@@ -458,9 +461,9 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
+					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{ displayName: 'Project ID', name: 'project_id', type: 'string', default: '' },
-					{ displayName: 'Description', name: 'description', type: 'string', default: '' },
 				],
 			},
 
@@ -504,13 +507,13 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
-					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
-					{ displayName: 'Short Name', name: 'short_name', type: 'string', default: '' },
-					{ displayName: 'Color (hex)', name: 'color', type: 'color', default: '#f5a623' },
-					{ displayName: 'Is Reviewable', name: 'is_reviewable', type: 'boolean', default: false },
-					{ displayName: 'Is Done', name: 'is_done', type: 'boolean', default: false },
+					{ displayName: 'Color (Hex)', name: 'color', type: 'color', default: '#f5a623' },
 					{ displayName: 'Is Artist Allowed', name: 'is_artist_allowed', type: 'boolean', default: true },
 					{ displayName: 'Is Client Allowed', name: 'is_client_allowed', type: 'boolean', default: false },
+					{ displayName: 'Is Done', name: 'is_done', type: 'boolean', default: false },
+					{ displayName: 'Is Reviewable', name: 'is_reviewable', type: 'boolean', default: false },
+					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
+					{ displayName: 'Short Name', name: 'short_name', type: 'string', default: '' },
 				],
 			},
 			{
@@ -526,24 +529,24 @@ export class Kitsu implements INodeType {
 					},
 				},
 				options: [
-					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
-					{ displayName: 'Short Name', name: 'short_name', type: 'string', default: '' },
-					{ displayName: 'Color (hex)', name: 'color', type: 'color', default: '#bbb' },
+					{ displayName: 'Color (Hex)', name: 'color', type: 'color', default: '#bbb' },
 					{
 						displayName: 'For Entity',
 						name: 'for_entity',
 						type: 'options',
 						options: [
-							{ name: 'Shot', value: 'Shot' },
 							{ name: 'Asset', value: 'Asset' },
-							{ name: 'Sequence', value: 'Sequence' },
-							{ name: 'Episode', value: 'Episode' },
 							{ name: 'Edit', value: 'Edit' },
+							{ name: 'Episode', value: 'Episode' },
+							{ name: 'Sequence', value: 'Sequence' },
+							{ name: 'Shot', value: 'Shot' },
 						],
 						default: 'Shot',
 					},
 					{ displayName: 'Is Animation', name: 'is_animation', type: 'boolean', default: false },
+					{ displayName: 'Name', name: 'name', type: 'string', default: '' },
 					{ displayName: 'Priority', name: 'priority', type: 'number', default: 1 },
+					{ displayName: 'Short Name', name: 'short_name', type: 'string', default: '' },
 				],
 			},
 
@@ -553,11 +556,11 @@ export class Kitsu implements INodeType {
 				name: 'httpMethod',
 				type: 'options',
 				options: [
+					{ name: 'DELETE', value: 'DELETE' },
 					{ name: 'GET', value: 'GET' },
+					{ name: 'PATCH', value: 'PATCH' },
 					{ name: 'POST', value: 'POST' },
 					{ name: 'PUT', value: 'PUT' },
-					{ name: 'PATCH', value: 'PATCH' },
-					{ name: 'DELETE', value: 'DELETE' },
 				],
 				default: 'GET',
 				displayOptions: { show: { resource: ['customAction'] } },
@@ -568,7 +571,7 @@ export class Kitsu implements INodeType {
 				type: 'string',
 				default: '/data/projects',
 				placeholder: '/data/shots/{{shotId}}/tasks',
-				description: 'Path relative to /api — e.g. /data/projects or /actions/projects/{id}/import',
+				description: 'Path relative to /api — e.g. /data/projects or /actions/projects/{ID}/import',
 				displayOptions: { show: { resource: ['customAction'] } },
 			},
 			{
