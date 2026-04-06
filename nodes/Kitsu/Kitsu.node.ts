@@ -4,7 +4,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeApiError,
-	NodeConnectionType,
 	NodeOperationError,
 	IDataObject,
 	IHttpRequestOptions,
@@ -108,6 +107,7 @@ export class Kitsu implements INodeType {
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Interact with the Kitsu/CGWire production management API (Zou)',
 		defaults: { name: 'Kitsu' },
+		usableAsTool: true,
 		inputs: ['main'],
 		outputs: ['main'],
 		credentials: [
