@@ -4,3 +4,4 @@ dist/
 *.d.ts.map
 .env
 .DS_Store
+# NON ignorare package-lock.json — richiesto da npm ci in GitHub Actions
