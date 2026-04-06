@@ -19,12 +19,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Aiacos/n8n-nodes-kitsu"
+    "url": "git+https://github.com/Aiacos/n8n-nodes-kitsu.git"
   },
   "engines": {
     "node": ">=18.10"
   },
   "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "n8n-node build",
     "dev": "tsc --watch",
@@ -47,11 +50,8 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@n8n/node-cli": "^0.23.0",
     "@types/node": "^18.19.130",
-    "eslint": "^9.39.4",
-    "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "n8n-workflow": "*",
     "typescript": "^5.1.6"
   },

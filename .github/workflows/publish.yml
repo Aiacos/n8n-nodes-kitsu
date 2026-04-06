@@ -1,52 +1,8 @@
-# Pubblica il pacchetto n8n-nodes-kitsu su npm ad ogni push di un tag versione.
-#
-# Dal 1 maggio 2026, n8n richiede che tutti i community node siano pubblicati
-# via GitHub Actions con npm provenance statement. Questo workflow soddisfa
-# quel requisito. Il provenance permette a chiunque di verificare
-# crittograficamente che il pacchetto sia stato costruito da questo esatto
-# workflow, da questo esatto repository e commit.
-#
-# ─── SETUP UNA TANTUM ──────────────────────────────────────────────────────────
-#
-# Opzione A — OIDC Trusted Publishing (raccomandata, nessun secret a vita lunga):
-#   1. Accedi a npmjs.com e apri le impostazioni del tuo pacchetto.
-#   2. In "Publish access" → "Trusted Publishers", clicca "Add a publisher".
-#   3. Seleziona GitHub Actions e compila:
-#        Repository owner: Aiacos
-#        Repository name:  n8n-nodes-kitsu
-#        Workflow name:    publish.yml
-#        Environment:      (lascia vuoto a meno che non usi GitHub Environments)
-#   4. NON impostare il secret NPM_TOKEN in questo repository. Viene usato
-#      il token OIDC di GitHub — nessun secret tocca mai le impostazioni del repo.
-#
-# Opzione B — npm Automation Token (alternativa):
-#   1. Su npmjs.com: Access Tokens → Generate New Token → Granular Access Token.
-#      Scopalo su questo pacchetto con permesso "Read and write".
-#   2. Su GitHub: Settings → Secrets and variables → Actions → New secret.
-#      Chiamalo NPM_TOKEN e incolla il valore.
-#
-# ─── CONVENZIONE TAG ───────────────────────────────────────────────────────────
-#
-# Il workflow si attiva su tag che corrispondono a "*.*.*" (es. 0.2.0).
-# Se preferisci tag con prefisso "v" (es. v0.2.0), cambia il filtro in:
-#   tags: ['v*.*.*']
-#
-# ─── PROCESSO DI RELEASE ───────────────────────────────────────────────────────
-#
-# Esegui localmente per avviare un release interattivo:
-#
-#   npm run release
-#
-# Questo farà lint, build, chiederà il bump di versione, aggiornerà il
-# changelog, committera, taggerà e farà push — attivando questo workflow
-# per pubblicare su npm.
-
 name: Publish
 
 on:
   push:
     tags:
-      # Corrisponde a 0.1.0, 1.2.3, 2.0.0-rc.1, ecc.
       - '*.*.*'
 
 jobs:
@@ -55,9 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      # Necessario per coniare un token OIDC per npm provenance attestation.
       id-token: write
-      # Ridotto dal default (write) per least-privilege publishing.
       contents: read
 
     steps:
@@ -67,19 +21,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: 'npm'
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
       - name: Release
-        # Pubblica su npm con provenance attestation (richiede id-token: write sopra).
-        # Lint e build vengono eseguiti automaticamente come parte del processo di release.
-        #
-        # Opzione A (OIDC): lascia NPM_TOKEN non impostato — lo step del token
-        #   viene saltato e npm usa lo scambio OIDC.
-        # Opzione B (token): imposta NPM_TOKEN nei repo secrets — viene scritto
-        #   in .npmrc prima della pubblicazione.
         run: |
           [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
           npm run release
