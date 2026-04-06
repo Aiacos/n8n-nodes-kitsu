@@ -216,7 +216,7 @@ export class Kitsu implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['comment', 'previewFile'],
-						operation: ['getAllForTask', 'create'],
+						operation: ['getAllForTask', 'create', 'delete'],
 					},
 				},
 			},
@@ -487,7 +487,8 @@ export class Kitsu implements INodeType {
 				name: 'task_status_id',
 				type: 'string',
 				default: '',
-				description: 'Change task status when posting this comment',
+				required: true,
+				description: 'Task status to set when posting this comment (required by Zou API)',
 				displayOptions: {
 					show: { resource: ['comment'], operation: ['create'] },
 				},
@@ -618,7 +619,7 @@ export class Kitsu implements INodeType {
 
 				// ── resource → endpoint mapping ──────────────────────────────
 				const resourcePath: Record<string, string> = {
-					asset: '/data/entities',
+					asset: '/data/assets',
 					episode: '/data/episodes',
 					person: '/data/persons',
 					project: '/data/projects',
@@ -661,14 +662,13 @@ export class Kitsu implements INodeType {
 					} else if (operation === 'create') {
 						const text = this.getNodeParameter('text', i) as string;
 						const taskStatusId = this.getNodeParameter('task_status_id', i, '') as string;
-						const body: IDataObject = { task_id: taskId, text };
-						if (taskStatusId) body.task_status_id = taskStatusId;
+						const body: IDataObject = { task_status_id: taskStatusId, comment: text };
 						result = await kitsuRequest.call(this, jwt, host, 'POST', `/actions/tasks/${taskId}/comment`, body);
 					} else if (operation === 'update') {
 						const text = this.getNodeParameter('text', i) as string;
 						result = await kitsuRequest.call(this, jwt, host, 'PUT', `/data/comments/${id}`, { text });
 					} else if (operation === 'delete') {
-						result = await kitsuRequest.call(this, jwt, host, 'DELETE', `/data/comments/${id}`);
+						result = await kitsuRequest.call(this, jwt, host, 'DELETE', `/data/tasks/${taskId}/comments/${id}`);
 					}
 
 				} else if (resource === 'previewFile') {
