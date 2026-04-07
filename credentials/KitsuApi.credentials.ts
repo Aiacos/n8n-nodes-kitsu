@@ -1,5 +1,4 @@
 import {
-	IAuthenticateGeneric,
 	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties,
@@ -8,7 +7,7 @@ import {
 export class KitsuApi implements ICredentialType {
 	name = 'kitsuApi';
 	displayName = 'Kitsu API';
-	documentationUrl = 'https://zou.cg-wire.com/api/';
+	documentationUrl = 'https://api-docs.kitsu.cloud/';
 	icon = 'file:kitsu.svg' as const;
 
 	properties: INodeProperties[] = [
@@ -39,25 +38,15 @@ export class KitsuApi implements ICredentialType {
 		},
 	];
 
-	// n8n will inject the JWT automatically via the authenticate method.
-	// We use a custom authenticate flow inside the node itself because
-	// Kitsu requires a two-step auth (POST /auth/login → get JWT → inject Bearer).
-	// The generic IAuthenticateGeneric below handles simple bearer injection
-	// once the node retrieves the token.
-	authenticate: IAuthenticateGeneric = {
-		type: 'generic',
-		properties: {
-			headers: {
-				Authorization: '={{"Bearer " + $credentials.access_token}}',
-			},
-		},
-	};
-
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: '={{$credentials.host}}/api',
-			url: '/auth/authenticated',
-			method: 'GET',
+			url: '/auth/login',
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+			body: '=email={{encodeURIComponent($credentials.email)}}&password={{encodeURIComponent($credentials.password)}}',
 		},
 	};
 }

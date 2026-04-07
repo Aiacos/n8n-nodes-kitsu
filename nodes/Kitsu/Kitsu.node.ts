@@ -102,7 +102,7 @@ export class Kitsu implements INodeType {
 		displayName: 'Kitsu',
 		name: 'kitsu',
 		icon: 'file:kitsu.svg',
-		group: ['transform'],
+		group: ['output'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Interact with the Kitsu/CGWire production management API (Zou)',
@@ -233,6 +233,29 @@ export class Kitsu implements INodeType {
 				},
 			},
 
+			// ── Return All toggle ─────────────────────────────────────────────
+			{
+				displayName: 'Return All',
+				name: 'returnAll',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to return all results or only up to a given limit',
+				displayOptions: {
+					show: { operation: ['getAll'] },
+				},
+			},
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				typeOptions: { minValue: 1, maxValue: 500 },
+				default: 50,
+				description: 'Max number of results to return',
+				displayOptions: {
+					show: { operation: ['getAll'], returnAll: [false] },
+				},
+			},
+
 			// ── Filters for getAll ─────────────────────────────────────────────
 			{
 				displayName: 'Filters',
@@ -250,20 +273,6 @@ export class Kitsu implements INodeType {
 						type: 'string',
 						default: '',
 						description: 'Filter tasks by person UUID',
-					},
-					{
-						displayName: 'Limit',
-						name: 'limit',
-						type: 'number',
-						typeOptions: { minValue: 1 },
-						description: 'Max number of results to return',
-						default: 50,
-					},
-					{
-						displayName: 'Page',
-						name: 'page',
-						type: 'number',
-						default: 1,
 					},
 					{
 						displayName: 'Project ID',
@@ -686,12 +695,39 @@ export class Kitsu implements INodeType {
 					const basePath = resourcePath[resource];
 
 					if (operation === 'getAll') {
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 						const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
 						const qs: IDataObject = {};
 						for (const [k, v] of Object.entries(filters)) {
 							if (v !== '' && v !== undefined) qs[k] = v;
 						}
-						result = await kitsuRequest.call(this, jwt, host, 'GET', basePath, undefined, qs);
+
+						if (returnAll) {
+							const pageSize = 100;
+							let page = 1;
+							const allResults: IDataObject[] = [];
+							let batch: IDataObject | IDataObject[];
+							do {
+								qs.page = page;
+								qs.limit = pageSize;
+								batch = await kitsuRequest.call(this, jwt, host, 'GET', basePath, undefined, qs);
+								if (Array.isArray(batch)) {
+									allResults.push(...batch);
+								} else {
+									allResults.push(batch);
+									break;
+								}
+								page++;
+							} while (Array.isArray(batch) && batch.length >= pageSize);
+							result = allResults;
+						} else {
+							const limit = this.getNodeParameter('limit', i) as number;
+							qs.limit = limit;
+							result = await kitsuRequest.call(this, jwt, host, 'GET', basePath, undefined, qs);
+							if (Array.isArray(result) && result.length > limit) {
+								result = result.slice(0, limit);
+							}
+						}
 
 					} else if (operation === 'get') {
 						const id = this.getNodeParameter('id', i) as string;
